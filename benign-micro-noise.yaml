@@ -1,0 +1,82 @@
+playbook:
+  id: campaign-benign-micro-noise
+  name: Campaign Benign Micro Noise
+  scenario_type: test
+  version: "1.0"
+
+actors:
+  worker:
+    node: alpine1
+
+steps:
+  - id: micro-procfs-poll
+    stage: benign
+    actor: worker
+    description: Frequent procfs polling like lightweight agents
+    executor:
+      type: direct
+      command: "for i in $(seq 1 60); do cat /proc/stat /proc/meminfo /proc/uptime >/dev/null; done"
+    timeout: 20
+
+  - id: micro-fd-inspect
+    stage: benign
+    actor: worker
+    description: Short periodic process and fd inspection
+    executor:
+      type: direct
+      command: "for i in $(seq 1 40); do ls -l /proc/self/fd >/dev/null 2>&1; cat /proc/self/status >/dev/null; done"
+    timeout: 20
+
+  - id: micro-cache-churn
+    stage: benign
+    actor: worker
+    description: Session cache create write rotate cleanup churn
+    executor:
+      type: direct
+      command: "mkdir -p /tmp/.cache/sysfield-noise && for i in $(seq 1 40); do printf '%s %s\n' \"$i\" ok >> /tmp/.cache/sysfield-noise/state.log; cp /tmp/.cache/sysfield-noise/state.log /tmp/.cache/sysfield-noise/state.log.1; : > /tmp/.cache/sysfield-noise/state.log; done"
+    timeout: 20
+
+  - id: micro-temp-lifecycle
+    stage: benign
+    actor: worker
+    description: Temp file lifecycle with create rename delete
+    executor:
+      type: direct
+      command: "mkdir -p /tmp/sysfield-noise && for i in $(seq 1 40); do dd if=/dev/zero of=/tmp/sysfield-noise/f.$i bs=512 count=1 status=none; mv /tmp/sysfield-noise/f.$i /tmp/sysfield-noise/f.$i.old; rm -f /tmp/sysfield-noise/f.$i.old; done"
+    timeout: 20
+
+  - id: micro-config-reads
+    stage: benign
+    actor: worker
+    description: Recurring reads of common host config files
+    executor:
+      type: direct
+      command: "for i in $(seq 1 30); do cat /etc/hosts /etc/resolv.conf /etc/passwd >/dev/null 2>&1; done"
+    timeout: 15
+
+  - id: micro-localnet-noise
+    stage: benign
+    actor: worker
+    description: Localhost checks and resolver lookups with retries
+    executor:
+      type: direct
+      command: "for i in $(seq 1 20); do ping -c 1 127.0.0.1 >/dev/null 2>&1 || true; cat /etc/resolv.conf >/dev/null; done"
+    timeout: 20
+
+  - id: micro-shell-churn
+    stage: benign
+    actor: worker
+    description: Many short lived shell utility executions
+    executor:
+      type: direct
+      command: "for i in $(seq 1 80); do sh -c 'true'; done"
+    timeout: 15
+
+  - id: micro-cleanup-pass
+    stage: benign
+    actor: worker
+    description: Cleanup pass like periodic maintenance
+    executor:
+      type: direct
+      command: "find /tmp/sysfield-noise -maxdepth 1 -type f -name 'f.*' -delete 2>/dev/null; find /tmp/.cache/sysfield-noise -maxdepth 1 -type f -name 'state.log*' -delete 2>/dev/null"
+    timeout: 10

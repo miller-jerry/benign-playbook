@@ -1,0 +1,37 @@
+playbook:
+  id: campaign-benign-ipc
+  name: Benign - IPC and local service chatter
+  scenario_type: test
+  version: "1.0"
+
+actors:
+  worker:
+    node: alpine1
+
+steps:
+  - id: pipe-io-churn
+    stage: benign
+    actor: worker
+    description: Pipe read/write churn similar to wrappers and daemons
+    executor:
+      type: direct
+      command: "for i in $(seq 1 80); do sh -c 'printf ping | wc -c >/dev/null'; done"
+    timeout: 25
+
+  - id: loopback-tcp-chatter
+    stage: benign
+    actor: worker
+    description: Loopback socket read and write traffic
+    executor:
+      type: direct
+      command: "for i in $(seq 1 25); do nc -l -p 19090 >/tmp/hw17.loop.$i 2>/dev/null & pid=$!; sleep 0.05; printf hello | nc 127.0.0.1 19090 >/dev/null 2>&1 || true; wait $pid 2>/dev/null || true; done"
+    timeout: 35
+
+  - id: ssh-like-connect-attempts
+    stage: benign
+    actor: worker
+    description: Short TCP connect attempts to local SSH endpoint
+    executor:
+      type: direct
+      command: "for i in $(seq 1 40); do nc -z -w 1 127.0.0.1 22 >/dev/null 2>&1 || true; done"
+    timeout: 25

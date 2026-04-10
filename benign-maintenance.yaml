@@ -1,0 +1,37 @@
+playbook:
+  id: campaign-benign-maintenance
+  name: Benign - maintenance and utility churn
+  scenario_type: test
+  version: "1.0"
+
+actors:
+  worker:
+    node: alpine1
+
+steps:
+  - id: utility-exec-churn
+    stage: benign
+    actor: worker
+    description: Frequent short utility execution bursts
+    executor:
+      type: direct
+      command: "for i in $(seq 1 60); do sh -c 'true'; sh -c 'echo ok >/dev/null'; done"
+    timeout: 20
+
+  - id: temp-rename-rotation
+    stage: benign
+    actor: worker
+    description: Temp file write and rename rotation
+    executor:
+      type: direct
+      command: "mkdir -p /tmp/hw17.rotate && for i in $(seq 1 60); do printf '%s\n' $i > /tmp/hw17.rotate/state; mv /tmp/hw17.rotate/state /tmp/hw17.rotate/state.old; cat /tmp/hw17.rotate/state.old >/dev/null; done"
+    timeout: 25
+
+  - id: daemon-log-tail-pattern
+    stage: benign
+    actor: worker
+    description: Repeated reads from config and metadata files
+    executor:
+      type: direct
+      command: "for i in $(seq 1 50); do cat /etc/hosts /etc/resolv.conf /etc/passwd >/dev/null 2>&1; done"
+    timeout: 20

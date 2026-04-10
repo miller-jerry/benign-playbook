@@ -1,0 +1,91 @@
+playbook:
+  id: campaign-benign-baseline
+  name: Campaign Benign Baseline
+  scenario_type: test
+  version: "1.0"
+
+actors:
+  worker:
+    node: alpine1
+
+steps:
+  - id: benign-uptime
+    stage: benign
+    actor: worker
+    description: Normal system check
+    executor:
+      type: direct
+      command: "uptime && cat /proc/loadavg"
+    timeout: 10
+
+  - id: benign-session-cache
+    stage: benign
+    actor: worker
+    description: Normal user cache refresh and log rollover
+    executor:
+      type: direct
+      command: "mkdir -p /tmp/.cache/session && date > /tmp/.cache/session/state.log && cp /tmp/.cache/session/state.log /tmp/.cache/session/state.log.1 && rm -f /tmp/.cache/session/state.log"
+    timeout: 10
+
+  - id: benign-df
+    stage: benign
+    actor: worker
+    description: Normal disk check
+    executor:
+      type: direct
+      command: "df -h && du -sh /tmp 2>/dev/null"
+    timeout: 10
+
+  - id: benign-proc-fd
+    stage: benign
+    actor: worker
+    description: Normal process and file descriptor inspection
+    executor:
+      type: direct
+      command: "ls -la /proc/self/fd && cat /proc/self/status"
+    timeout: 10
+
+  - id: benign-ps
+    stage: benign
+    actor: worker
+    description: Normal process listing
+    executor:
+      type: direct
+      command: "ps aux && cat /proc/stat"
+    timeout: 10
+
+  - id: benign-net
+    stage: benign
+    actor: worker
+    description: Normal network check
+    executor:
+      type: direct
+      command: "cat /etc/resolv.conf && ip addr && (ping -c 1 127.0.0.1 >/dev/null 2>&1 || true) && (wget -q -O - http://127.0.0.1:65535 >/dev/null 2>&1 || true)"
+    timeout: 10
+
+  - id: benign-config-read
+    stage: benign
+    actor: worker
+    description: Normal configuration and runtime metadata reads
+    executor:
+      type: direct
+      command: "cat /etc/hosts && cat /etc/passwd && cat /proc/mounts"
+    timeout: 10
+
+  - id: benign-log
+    stage: benign
+    actor: worker
+    description: Normal log reading
+    executor:
+      type: direct
+      command: "ls -la /var/log/ 2>/dev/null; cat /proc/uptime"
+    timeout: 10
+
+  - id: benign-temp-cleanup
+    stage: benign
+    actor: worker
+    description: Normal temp file cleanup
+    executor:
+      type: direct
+      command: "find /tmp -maxdepth 2 -type f -name '*.tmp' -delete 2>/dev/null; sync"
+    timeout: 10

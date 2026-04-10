@@ -1,0 +1,37 @@
+playbook:
+  id: campaign-benign-read-dominant
+  name: Benign - Read dominant noise
+  scenario_type: test
+  version: "1.0"
+
+actors:
+  worker:
+    node: alpine1
+
+steps:
+  - id: read-procfs-hotloop
+    stage: benign
+    actor: worker
+    description: High-frequency procfs reads
+    executor:
+      type: direct
+      command: "for i in $(seq 1 300); do cat /proc/self/cmdline /proc/self/status /proc/stat /proc/meminfo /proc/uptime >/dev/null 2>&1; done"
+    timeout: 45
+
+  - id: read-pipe-wrapper-pattern
+    stage: benign
+    actor: worker
+    description: Wrapper-like pipe read pattern with short payloads
+    executor:
+      type: direct
+      command: "for i in $(seq 1 220); do sh -c 'printf x | wc -c >/dev/null'; done"
+    timeout: 40
+
+  - id: read-config-loop
+    stage: benign
+    actor: worker
+    description: Repeated small reads on common config targets
+    executor:
+      type: direct
+      command: "for i in $(seq 1 220); do cat /etc/hosts /etc/resolv.conf /etc/passwd >/dev/null 2>&1; done"
+    timeout: 40

@@ -1,0 +1,46 @@
+playbook:
+  id: campaign-benign-object-centric
+  name: Benign - Object-centric hotspots
+  scenario_type: test
+  version: "1.0"
+
+actors:
+  worker:
+    node: alpine1
+
+steps:
+  - id: obj-proc-stat-hotset
+    stage: benign
+    actor: worker
+    description: Repeated reads on /proc stat-like objects
+    executor:
+      type: direct
+      command: "for i in $(seq 1 260); do cat /proc/stat /proc/self/stat /proc/1/stat >/dev/null 2>&1; done"
+    timeout: 45
+
+  - id: obj-wrapper-pipe-path
+    stage: benign
+    actor: worker
+    description: Wrapper-like tmp pipe object access
+    executor:
+      type: direct
+      command: "rm -f /tmp/wrapper-737-1-in; mkfifo /tmp/wrapper-737-1-in; for i in $(seq 1 160); do (printf x > /tmp/wrapper-737-1-in &) ; dd if=/tmp/wrapper-737-1-in of=/dev/null bs=1 count=1 status=none; done; rm -f /tmp/wrapper-737-1-in"
+    timeout: 50
+
+  - id: obj-service-config-hotset
+    stage: benign
+    actor: worker
+    description: Poll service config and journal-like files
+    executor:
+      type: direct
+      command: "mkdir -p /usr/local/hostguard/conf /var/lib/mongodb /usr/tomcat/apache-tomcat-8.5.76/conf/Catalina/localhost /usr/tomcat/apache-tomcat-8.5.76/webapps && printf v >/usr/local/hostguard/conf/agentinfo && printf j >/var/lib/mongodb/journal && printf t >/usr/tomcat/apache-tomcat-8.5.76/conf/tomcat-users.xml && for i in $(seq 1 180); do cat /usr/local/hostguard/conf/agentinfo >/dev/null 2>&1; ls -l /var/lib/mongodb/journal >/dev/null 2>&1; ls -ld /usr/tomcat/apache-tomcat-8.5.76/conf/Catalina/localhost /usr/tomcat/apache-tomcat-8.5.76/webapps >/dev/null 2>&1; done"
+    timeout: 50
+
+  - id: obj-devnull-and-loopback
+    stage: benign
+    actor: worker
+    description: /dev/null writes and loopback socket chatter
+    executor:
+      type: direct
+      command: "for i in $(seq 1 260); do printf x >/dev/null; done; for i in $(seq 1 30); do nc -l -p 19091 >/dev/null 2>&1 & pid=$!; sleep 0.03; printf ping | nc 127.0.0.1 19091 >/dev/null 2>&1 || true; wait $pid 2>/dev/null || true; done"
+    timeout: 45
